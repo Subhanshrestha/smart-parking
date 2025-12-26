@@ -33,6 +33,32 @@ body {
   font-size: 1.1rem;
 }
 
+.filters {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.filters button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #16213e;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filters button:hover {
+  background: #1f2b4a;
+}
+
+.filters button.active {
+  background: #3498db;
+  color: #fff;
+}
+
 .dashboard {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -44,6 +70,17 @@ body {
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.lot-card.selected {
+  border: 2px solid #3498db;
 }
 
 .lot-card h2 {
@@ -99,6 +136,72 @@ body {
   text-align: center;
   color: #888;
   font-size: 0.9rem;
+}
+
+.spot-detail {
+  margin-top: 30px;
+  background: #16213e;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.spot-detail h2 {
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.spots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.spot {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.spot.free {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.spot.taken {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  color: #888;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dot.free {
+  background: #2ecc71;
+}
+
+.dot.taken {
+  background: #e74c3c;
 }
 
 .loading, .error {

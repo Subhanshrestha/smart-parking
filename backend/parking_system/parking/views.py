@@ -1,5 +1,3 @@
-
-# Create your views here.
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -21,6 +19,13 @@ class ParkingLotViewSet(viewsets.ModelViewSet):
 class ParkingSpotViewSet(viewsets.ModelViewSet):
     queryset = ParkingSpot.objects.all()
     serializer_class = ParkingSpotSerializer
+
+    def get_queryset(self):
+        queryset = ParkingSpot.objects.all()
+        lot_id = self.request.query_params.get('parking_lot')
+        if lot_id:
+            queryset = queryset.filter(parking_lot_id=lot_id)
+        return queryset
 
 
 class PermitTypeViewSet(viewsets.ModelViewSet):
