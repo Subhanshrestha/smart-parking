@@ -79,7 +79,7 @@ function App() {
         <div className="header-top">
           <div className="header-title">
             <img src={vtLogo} alt="Virginia Tech" className="vt-logo" />
-            <h1>Smart Parking</h1>
+            <h1>ParkGrid: Smart Parking</h1>
           </div>
           <div className="search-container">
             <input
@@ -92,22 +92,27 @@ function App() {
         </div>
         <div className="header-bottom">
           <p>Real-time parking availability</p>
-          {lastUpdated && (
-            <span className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</span>
-          )}
+          <span className="last-updated">Loading...</span>
         </div>
       </header>
-      <div className="dashboard">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="lot-card skeleton">
-            <div className="skeleton-title"></div>
-            <div className="skeleton-stats">
-              <div className="skeleton-number"></div>
-              <div className="skeleton-number"></div>
+      <div className="main-content">
+        <div className="lots-panel">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="lot-card skeleton">
+              <div className="skeleton-title"></div>
+              <div className="skeleton-stats">
+                <div className="skeleton-number"></div>
+                <div className="skeleton-number"></div>
+              </div>
+              <div className="skeleton-bar"></div>
             </div>
-            <div className="skeleton-bar"></div>
+          ))}
+        </div>
+        <div className="spots-panel">
+          <div className="spots-placeholder">
+            <p>Select a parking lot to view individual spots</p>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -120,7 +125,7 @@ function App() {
         <div className="header-top">
           <div className="header-title">
             <img src={vtLogo} alt="Virginia Tech" className="vt-logo" />
-            <h1>Smart Parking</h1>
+            <h1>ParkGrid: Smart Parking</h1>
           </div>
           <div className="header-controls">
             <div className="search-container">
@@ -143,58 +148,66 @@ function App() {
         </div>
       </header>
 
-      <div className="dashboard">
-        {lots.filter(lot => lot.name.toLowerCase().includes(searchTerm.toLowerCase())).map((lot) => (
-          <div 
-            key={lot.id} 
-            className={`lot-card ${selectedLot?.id === lot.id ? 'selected' : ''}`}
-            onClick={() => setSelectedLot(selectedLot?.id === lot.id ? null : lot)}
-          >
-            <h2>{lot.name}</h2>
-            <div className="stats">
-              <div className="stat available">
-                <span className="number">{lot.available_spots}</span>
-                <span className="label">Available</span>
+      <div className="main-content">
+        <div className="lots-panel">
+          {lots.filter(lot => lot.name.toLowerCase().includes(searchTerm.toLowerCase())).map((lot) => (
+            <div 
+              key={lot.id} 
+              className={`lot-card ${selectedLot?.id === lot.id ? 'selected' : ''}`}
+              onClick={() => setSelectedLot(lot)}
+            >
+              <h2>{lot.name}</h2>
+              <div className="stats">
+                <div className="stat available">
+                  <span className="number">{lot.available_spots}</span>
+                  <span className="label">Available</span>
+                </div>
+                <div className="stat total">
+                  <span className="number">{lot.total_spots}</span>
+                  <span className="label">Total</span>
+                </div>
               </div>
-              <div className="stat total">
-                <span className="number">{lot.total_spots}</span>
-                <span className="label">Total</span>
+              <div className="occupancy-bar">
+                <div 
+                  className="occupancy-fill"
+                  style={{ 
+                    width: `${lot.occupancy_percent}%`,
+                    backgroundColor: lot.occupancy_percent > 80 ? '#ef4444' : 
+                                     lot.occupancy_percent > 50 ? '#f59e0b' : '#10b981'
+                  }}
+                />
               </div>
+              <p className="occupancy-text">{lot.occupancy_percent}% occupied</p>
             </div>
-            <div className="occupancy-bar">
-              <div 
-                className="occupancy-fill"
-                style={{ 
-                  width: `${lot.occupancy_percent}%`,
-                  backgroundColor: lot.occupancy_percent > 80 ? '#ef4444' : 
-                                   lot.occupancy_percent > 50 ? '#f59e0b' : '#10b981'
-                }}
-              />
-            </div>
-            <p className="occupancy-text">{lot.occupancy_percent}% occupied</p>
-          </div>
-        ))}
-      </div>
-
-      {selectedLot && (
-        <div className="spot-detail">
-          <h2>{selectedLot.name} - Individual Spots</h2>
-          <div className="spots-grid">
-            {spots.map((spot) => (
-              <div 
-                key={spot.parking_spot_id} 
-                className={`spot ${spot.availability ? 'free' : 'taken'}`}
-              >
-                {spot.parking_spot_id}
-              </div>
-            ))}
-          </div>
-          <div className="legend">
-            <span><span className="dot free"></span> Available</span>
-            <span><span className="dot taken"></span> Occupied</span>
-          </div>
+          ))}
         </div>
-      )}
+
+        <div className="spots-panel">
+          {selectedLot ? (
+            <div className="spot-detail">
+              <h2>{selectedLot.name} - Individual Spots</h2>
+              <div className="spots-grid">
+                {spots.map((spot) => (
+                  <div 
+                    key={spot.parking_spot_id} 
+                    className={`spot ${spot.availability ? 'free' : 'taken'}`}
+                  >
+                    {spot.parking_spot_id}
+                  </div>
+                ))}
+              </div>
+              <div className="legend">
+                <span><span className="dot free"></span> Available</span>
+                <span><span className="dot taken"></span> Occupied</span>
+              </div>
+            </div>
+          ) : (
+            <div className="spots-placeholder">
+              <p>Select a parking lot to view individual spots</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
