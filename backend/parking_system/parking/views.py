@@ -1,7 +1,8 @@
-from rest_framework import viewsets
-from rest_framework.decorators import api_view
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import PermitType, ParkingLot, ParkingSpot, Event, Session
+from .models import PermitType, ParkingLot, ParkingSpot, Event, Session, User
 from .serializers import (
     PermitTypeSerializer,
     ParkingLotSerializer,
@@ -59,3 +60,28 @@ def dashboard_summary(request):
             'occupancy_percent': round((total - available) / total * 100, 1) if total > 0 else 0
         })
     return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register(request):
+    """Register a new user."""
+    username = request.data.get('username')
+    password = request.data.get('password')
+    first_name = request.data.get('first_name', '')
+    last_name = request.data.get('last_name', '')
+
+    if not username or not password:
+        return Response({'error': 'Username and password required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username=username).exists():
+        return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        first_name=first_name,
+        last_name=last_name
+    )
+
+    return Response({'message': 'User created successfully', 'user_id': user.user_id}, status=status.HTTP_201_CREATED)

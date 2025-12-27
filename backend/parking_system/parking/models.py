@@ -42,6 +42,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
+    @property
+    def id(self):
+        return self.user_id
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
