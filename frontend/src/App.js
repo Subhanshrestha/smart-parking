@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import vtLogo from './VT_Logo.jpg';
+import Login from './Login';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [lots, setLots] = useState([]);
   const [selectedLot, setSelectedLot] = useState(null);
   const [spots, setSpots] = useState([]);
@@ -10,6 +12,21 @@ function App() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      setIsLoggedIn(true);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setIsLoggedIn(false);
+  };
 
   const fetchData = async () => {
     try {
@@ -37,10 +54,12 @@ function App() {
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isLoggedIn) {
+      fetchData();
+      const interval = setInterval(fetchData, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (selectedLot) {
@@ -50,13 +69,17 @@ function App() {
     }
   }, [selectedLot]);
 
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
+
   if (loading) return (
     <div className="app">
       <header className="header">
         <div className="header-top">
           <div className="header-title">
             <img src={vtLogo} alt="Virginia Tech" className="vt-logo" />
-            <h1>VT Smart Parking</h1>
+            <h1>Smart Parking</h1>
           </div>
           <div className="search-container">
             <input
@@ -95,16 +118,19 @@ function App() {
         <div className="header-top">
           <div className="header-title">
             <img src={vtLogo} alt="Virginia Tech" className="vt-logo" />
-            <h1>VT Smart Parking</h1>
+            <h1>Smart Parking</h1>
           </div>
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search lots..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
+          <div className="header-controls">
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search lots..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+            <button className="logout-btn" onClick={handleLogout}>Logout</button>
           </div>
         </div>
         <div className="header-bottom">

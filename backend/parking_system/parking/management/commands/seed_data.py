@@ -1,20 +1,16 @@
 from django.core.management.base import BaseCommand
-from parking.models import PermitType, ParkingLot, ParkingSpot, User, Vehicle
+from parking.models import PermitType, ParkingLot, ParkingSpot, User
 
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial parking data'
 
     def handle(self, *args, **options):
-        self.stdout.write('Clearing existing data...')
-        ParkingSpot.objects.all().delete()
-        ParkingLot.objects.all().delete()
-        PermitType.objects.all().delete()
-
+        # Create permit types (only if they don't exist)
         self.stdout.write('Creating permit types...')
-        student = PermitType.objects.create(name='Student')
-        faculty = PermitType.objects.create(name='Faculty')
-        visitor = PermitType.objects.create(name='Visitor')
+        student, _ = PermitType.objects.get_or_create(name='Student')
+        faculty, _ = PermitType.objects.get_or_create(name='Faculty')
+        visitor, _ = PermitType.objects.get_or_create(name='Visitor')
 
         self.stdout.write('Creating parking lots...')
         lots_data = [
@@ -26,16 +22,35 @@ class Command(BaseCommand):
         ]
 
         for lot_name, num_spots in lots_data:
-            lot = ParkingLot.objects.create(parking_lot_name=lot_name, occupancy=0)
+            lot, created = ParkingLot.objects.get_or_create(
+                parking_lot_name=lot_name,
+                defaults={'occupancy': 0}
+            )
             lot.permit_types.add(student, faculty)
             
-            for i in range(num_spots):
-                spot = ParkingSpot.objects.create(
-                    parking_lot=lot,
-                    availability=True
-                )
-                spot.lot_permit_access.add(student, faculty)
+            if created:
+                for i in range(num_spots):
+                    spot = ParkingSpot.objects.create(
+                        parking_lot=lot,
+                        availability=True
+                    )
+                    spot.lot_permit_access.add(student, faculty)
+                self.stdout.write(f'  Created {lot_name} with {num_spots} spots')
+            else:
+                self.stdout.write(f'  {lot_name} already exists, skipping')
 
-            self.stdout.write(f'  Created {lot_name} with {num_spots} spots')
+        # Create test user (only if doesn't exist)
+        self.stdout.write('Creating test user...')
+        if not User.objects.filter(username='demo').exists():
+            User.objects.create_user(
+                username='demo',
+                password='demo123',
+                first_name='Demo',
+                last_name='User'
+            )
+            self.stdout.write('  Created user: demo / demo123')
+        else:
+            self.stdout.write('  User demo already exists')
 
-        self.stdout.write(self.style.SUCCESS(f'\nDone! Created {ParkingLot.objects.count()} lots with {ParkingSpot.objects.count()} total spots'))
+        self.stdout.write(self.style.SUCCESS(f'\nDone! Total: {ParkingLot.objects.count()} lots with {ParkingSpot.objects.count()} spots'))
+        self.stdout.write(self.style.SUCCESS('Test login: username=demo, password=demo123'))
