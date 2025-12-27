@@ -31,7 +31,7 @@ echo "Starting frontend..."
 cd "$ROOT_DIR/frontend"
 
 [ -d node_modules ] || npm install
-npm start &
+npm run dev &
 FRONTEND_PID=$!
 
 ####################
