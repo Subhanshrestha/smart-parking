@@ -12,4 +12,5 @@ router.register(r'sessions', views.SessionViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('dashboard/', views.dashboard_summary, name='dashboard-summary'),
+    path('register/', views.register, name='register'),
 ]
