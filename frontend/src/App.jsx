@@ -3,9 +3,11 @@ import Dashboard from './Dashboard';
 import Login from './Login';
 import './App.css';
 
+const BASE_PATH = import.meta.env.VITE_BASE_PATH || '';
+
 function App() {
   return (
-    <Router>
+    <Router basename={BASE_PATH}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/login" element={<Login />} />

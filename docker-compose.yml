@@ -3,41 +3,61 @@ version: '3.8'
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
     environment:
       POSTGRES_DB: smart_parking
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   backend:
     build: ./backend
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/smart_parking
-      SECRET_KEY: docker-dev-secret-key
-      DEBUG: "True"
-      ALLOWED_HOSTS: localhost,127.0.0.1,backend
-      CORS_ORIGINS: http://localhost
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/smart_parking
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CORS_ORIGINS: ${CORS_ORIGINS}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8001:8000"
+    networks:
+      - app-network
+    volumes:
+      - static_files:/app/static
+      - media_files:/app/media
 
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_BASE_PATH: ${VITE_BASE_PATH}
+    restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "127.0.0.1:8080:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
+  static_files:
+  media_files:
