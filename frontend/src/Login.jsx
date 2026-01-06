@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Login({ onLogin }) {
+  const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -42,7 +44,14 @@ function Login({ onLogin }) {
 
       localStorage.setItem('access_token', loginData.access);
       localStorage.setItem('refresh_token', loginData.refresh);
-      onLogin();
+
+      // Call onLogin if provided (for modal usage)
+      if (onLogin) {
+        onLogin();
+      }
+
+      // Navigate to dashboard
+      navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {
