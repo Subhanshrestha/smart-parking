@@ -2,6 +2,8 @@
 
 A real-time smart parking availability system for Virginia Tech that helps drivers find open spots instantly. Built with Django REST Framework, React, and simulated IoT sensors.
 
+ **Live Demo:** https://busy.sys32ent.com/projects/smart-parking/
+
 ## What It Does
 
 ParkGrid tracks parking lot occupancy in real-time. Users can see which lots have space, drill down to individual spots, and watch availability change live as cars come and go.
