@@ -3,8 +3,8 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'lots', views.ParkingLotViewSet)
-router.register(r'spots', views.ParkingSpotViewSet)
+router.register(r'lots', views.ParkingLotViewSet, basename='lots')
+router.register(r'spots', views.ParkingSpotViewSet, basename='spots')
 router.register(r'permits', views.PermitTypeViewSet)
 router.register(r'events', views.EventViewSet)
 router.register(r'sessions', views.SessionViewSet)

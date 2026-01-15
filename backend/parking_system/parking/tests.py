@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.core.cache import cache
 from rest_framework.test import APITestCase
 from rest_framework import status
 from datetime import date, time, timedelta
@@ -300,6 +301,8 @@ class DashboardAPITest(APITestCase):
 
     def setUp(self):
         """Set up test data"""
+        # Clear cache to ensure fresh data for each test
+        cache.clear()
         self.lot = ParkingLot.objects.create(
             parking_lot_name='Test Lot',
             occupancy=0

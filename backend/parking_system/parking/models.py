@@ -93,12 +93,18 @@ class ParkingSpot(models.Model):
         on_delete=models.CASCADE,
         related_name='spots'
     )
-    availability = models.BooleanField(default=True)
+    availability = models.BooleanField(default=True, db_index=True)
     lot_permit_access = models.ManyToManyField(
         PermitType,
         related_name='accessible_spots',
         blank=True
     )
+
+    class Meta:
+        indexes = [
+            # Compound index for the most common query pattern
+            models.Index(fields=['parking_lot', 'availability'], name='spot_lot_avail_idx'),
+        ]
 
     def __str__(self):
         return f"Spot {self.parking_spot_id} in {self.parking_lot}"
@@ -108,7 +114,7 @@ class Event(models.Model):
     """Events (football games, etc.) that restrict parking lot access."""
     event_id = models.AutoField(primary_key=True)
     event_name = models.CharField(max_length=200)
-    date = models.DateField()
+    date = models.DateField(db_index=True)  # Indexed for active_events query
     time_start = models.TimeField()
     restricted_lots = models.ManyToManyField(
         ParkingLot,
