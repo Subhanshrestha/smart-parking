@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
 import vtLogo from './VT_Logo.jpg';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/parking/';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [wsConnected, setWsConnected] = useState(false);
 
   // New state for features
   const [profile, setProfile] = useState(null);
@@ -23,17 +25,152 @@ function Dashboard() {
   const [newVehicle, setNewVehicle] = useState({ make: '', model: '' });
   const [filterByPermit, setFilterByPermit] = useState(false);
 
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+
+  // Handle incoming WebSocket messages
+  const handleWsMessage = useCallback((event) => {
+    try {
+      const message = JSON.parse(event.data);
+
+      switch (message.type) {
+        case 'initial_state':
+          // Initial state from server on connect
+          setLots(message.data.map(lot => ({
+            id: lot.lot_id,
+            name: lot.lot_name,
+            total_spots: lot.total_spots,
+            available_spots: lot.available_spots,
+            occupancy_percent: lot.occupancy_percent
+          })));
+          setLastUpdated(new Date());
+          setLoading(false);
+          break;
+
+        case 'spot_update':
+          // Real-time update for a single spot
+          const update = message.data;
+          if (update.lot_id != null && typeof update.available_spots === 'number') {
+            setLots(prevLots => prevLots.map(lot => {
+              // Match on id or parking_lot_id (REST API uses 'id', some responses use 'parking_lot_id')
+              const lotId = lot.id ?? lot.parking_lot_id;
+              if (lotId == update.lot_id) {
+                return {
+                  ...lot,
+                  total_spots: typeof update.total_spots === 'number' ? update.total_spots : lot.total_spots,
+                  available_spots: update.available_spots,
+                  occupancy_percent: typeof update.occupancy_percent === 'number' ? update.occupancy_percent : lot.occupancy_percent
+                };
+              }
+              return lot;
+            }));
+          }
+          // Update spots if viewing this lot
+          if (update.spot_id != null) {
+            setSpots(prevSpots => prevSpots.map(spot =>
+              spot.parking_spot_id === update.spot_id
+                ? { ...spot, availability: update.available }
+                : spot
+            ));
+          }
+          setLastUpdated(new Date());
+          break;
+
+        case 'status_update':
+          // Full status update (response to get_status request)
+          setLots(message.data.map(lot => ({
+            id: lot.lot_id,
+            name: lot.lot_name,
+            total_spots: lot.total_spots,
+            available_spots: lot.available_spots,
+            occupancy_percent: lot.occupancy_percent
+          })));
+          setLastUpdated(new Date());
+          break;
+
+        case 'lot_spots':
+          // Spots for a specific lot
+          setSpots(message.data.map(spot => ({
+            parking_spot_id: spot.spot_id,
+            availability: spot.available
+          })));
+          break;
+
+        default:
+          console.log('Unknown message type:', message.type);
+      }
+    } catch (err) {
+      console.error('Error parsing WebSocket message:', err);
+    }
+  }, []);
+
+  // Connect to WebSocket
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    const ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      setWsConnected(true);
+      setError(null);
+    };
+
+    ws.onmessage = handleWsMessage;
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      setWsConnected(false);
+      // Reconnect after 3 seconds
+      reconnectTimeoutRef.current = setTimeout(connectWebSocket, 3000);
+    };
+
+    ws.onerror = (err) => {
+      console.error('WebSocket error:', err);
+      // Fall back to polling if WebSocket fails
+      setError('Real-time connection failed, falling back to polling');
+    };
+
+    wsRef.current = ws;
+  }, [handleWsMessage]);
+
+  // Request spots for a lot via WebSocket
+  const requestLotSpots = useCallback((lotId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'get_lot_spots',
+        lot_id: lotId
+      }));
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
       setIsLoggedIn(true);
     }
-    // Always load dashboard data regardless of login status
-    fetchData();
+
+    // Connect WebSocket for real-time updates
+    connectWebSocket();
     fetchActiveEvents();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // Fallback: fetch initial data via REST if WebSocket is slow
+    const fallbackTimeout = setTimeout(() => {
+      if (loading) {
+        fetchData();
+      }
+    }, 2000);
+
+    return () => {
+      clearTimeout(fallbackTimeout);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [connectWebSocket, loading]);
 
   const getAuthHeaders = () => ({
     'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -87,7 +224,17 @@ function Dashboard() {
       });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
-      setLots(data);
+      // Normalize field names (API returns 'id'/'name' or 'parking_lot_id'/'parking_lot_name')
+      const normalizedData = data.map(lot => ({
+        id: lot.id ?? lot.parking_lot_id,
+        name: lot.name ?? lot.parking_lot_name,
+        total_spots: lot.total_spots,
+        available_spots: lot.available_spots,
+        occupancy_percent: lot.occupancy_percent ?? (lot.total_spots > 0
+          ? Math.round((lot.total_spots - lot.available_spots) / lot.total_spots * 1000) / 10
+          : 0)
+      }));
+      setLots(normalizedData);
       setLastUpdated(new Date());
       setLoading(false);
     } catch (err) {
@@ -153,11 +300,14 @@ function Dashboard() {
 
   useEffect(() => {
     if (selectedLot) {
-      fetchSpots(selectedLot.id);
-      const interval = setInterval(() => fetchSpots(selectedLot.id), 3000);
-      return () => clearInterval(interval);
+      // Try WebSocket first, fall back to REST
+      if (wsConnected) {
+        requestLotSpots(selectedLot.id);
+      } else {
+        fetchSpots(selectedLot.id);
+      }
     }
-  }, [selectedLot]);
+  }, [selectedLot, wsConnected, requestLotSpots]);
 
   // Check if a lot is restricted by an active event
   const isLotRestricted = (lotId) => {
@@ -460,9 +610,14 @@ function Dashboard() {
         </div>
         <div className="header-bottom">
           <p>Real-time parking availability</p>
-          {lastUpdated && (
-            <span className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</span>
-          )}
+          <div className="status-info">
+            <span className={`ws-status ${wsConnected ? 'connected' : 'disconnected'}`}>
+              {wsConnected ? '● Live' : '○ Connecting...'}
+            </span>
+            {lastUpdated && (
+              <span className="last-updated">Last updated: {lastUpdated.toLocaleTimeString()}</span>
+            )}
+          </div>
         </div>
       </header>
 

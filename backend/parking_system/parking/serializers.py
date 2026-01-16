@@ -14,6 +14,13 @@ class ParkingSpotSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ParkingLotMinimalSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for nested use - no spots data."""
+    class Meta:
+        model = ParkingLot
+        fields = ['parking_lot_id', 'parking_lot_name']
+
+
 class ParkingLotSerializer(serializers.ModelSerializer):
     spots = ParkingSpotSerializer(many=True, read_only=True)
     available_spots = serializers.SerializerMethodField()
@@ -25,14 +32,21 @@ class ParkingLotSerializer(serializers.ModelSerializer):
         fields = ['parking_lot_id', 'parking_lot_name', 'occupancy', 'total_spots', 'available_spots', 'spots', 'permit_types']
 
     def get_available_spots(self, obj):
+        # Use annotated value if available, otherwise query
+        if hasattr(obj, '_available_spots'):
+            return obj._available_spots
         return obj.spots.filter(availability=True).count()
 
     def get_total_spots(self, obj):
+        # Use annotated value if available, otherwise query
+        if hasattr(obj, '_total_spots'):
+            return obj._total_spots
         return obj.spots.count()
 
 
 class EventSerializer(serializers.ModelSerializer):
-    restricted_lots = ParkingLotSerializer(many=True, read_only=True)
+    # Use minimal serializer to avoid loading all spot data
+    restricted_lots = ParkingLotMinimalSerializer(many=True, read_only=True)
 
     class Meta:
         model = Event

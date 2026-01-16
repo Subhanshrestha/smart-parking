@@ -373,6 +373,29 @@ body {
   font-size: 1rem;
 }
 
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ws-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.ws-status.connected {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.ws-status.disconnected {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
 .last-updated {
   color: #6b7280;
   font-size: 0.8rem;

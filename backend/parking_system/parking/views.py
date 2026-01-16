@@ -3,7 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
-from datetime import datetime
+from django.db.models import Count, Q
+from django.core.cache import cache
 from .models import PermitType, ParkingLot, ParkingSpot, Event, Session, User, Vehicle
 from .serializers import (
     PermitTypeSerializer,
@@ -17,16 +18,23 @@ from .serializers import (
 
 
 class ParkingLotViewSet(viewsets.ModelViewSet):
-    queryset = ParkingLot.objects.all().order_by('parking_lot_id')
     serializer_class = ParkingLotSerializer
+
+    def get_queryset(self):
+        # Prefetch spots and annotate counts to avoid N+1 queries
+        return ParkingLot.objects.prefetch_related(
+            'spots', 'permit_types'
+        ).annotate(
+            _total_spots=Count('spots'),
+            _available_spots=Count('spots', filter=Q(spots__availability=True))
+        ).order_by('parking_lot_id')
 
 
 class ParkingSpotViewSet(viewsets.ModelViewSet):
-    queryset = ParkingSpot.objects.all().order_by('parking_spot_id')
     serializer_class = ParkingSpotSerializer
 
     def get_queryset(self):
-        queryset = ParkingSpot.objects.all().order_by('parking_spot_id')
+        queryset = ParkingSpot.objects.select_related('parking_lot').order_by('parking_spot_id')
         lot_id = self.request.query_params.get('parking_lot')
         if lot_id:
             queryset = queryset.filter(parking_lot_id=lot_id)
@@ -61,19 +69,37 @@ class VehicleViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 def dashboard_summary(request):
-    """Quick summary endpoint for the frontend dashboard."""
-    lots = ParkingLot.objects.all().order_by('parking_lot_id')
-    data = []
-    for lot in lots:
-        total = lot.spots.count()
-        available = lot.spots.filter(availability=True).count()
-        data.append({
-            'id': lot.parking_lot_id,
-            'name': lot.parking_lot_name,
-            'total_spots': total,
-            'available_spots': available,
-            'occupancy_percent': round((total - available) / total * 100, 1) if total > 0 else 0
-        })
+    """Quick summary endpoint for the frontend dashboard.
+
+    Optimized with:
+    - Single query using annotations (no N+1)
+    - 2-second cache to reduce redundant queries
+    """
+    # Try cache first
+    cache_key = 'dashboard_summary'
+    data = cache.get(cache_key)
+
+    if data is None:
+        # Single query with annotations - no N+1 problem
+        lots = ParkingLot.objects.annotate(
+            total=Count('spots'),
+            available=Count('spots', filter=Q(spots__availability=True))
+        ).order_by('parking_lot_id')
+
+        data = [
+            {
+                'id': lot.parking_lot_id,
+                'name': lot.parking_lot_name,
+                'total_spots': lot.total,
+                'available_spots': lot.available,
+                'occupancy_percent': round((lot.total - lot.available) / lot.total * 100, 1) if lot.total > 0 else 0
+            }
+            for lot in lots
+        ]
+
+        # Cache for 2 seconds - balances freshness with performance
+        cache.set(cache_key, data, timeout=2)
+
     return Response(data)
 
 
