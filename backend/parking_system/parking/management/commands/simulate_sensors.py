@@ -43,6 +43,8 @@ class Command(BaseCommand):
                     )
 
                     # Broadcast to WebSocket
+                    total = lot.spots.count()
+                    available = total - lot.occupancy
                     async_to_sync(channel_layer.group_send)(
                         'parking_updates',
                         {
@@ -52,8 +54,9 @@ class Command(BaseCommand):
                                 'lot_name': lot.parking_lot_name,
                                 'spot_id': spot.parking_spot_id,
                                 'available': spot.availability,
-                                'occupancy': lot.occupancy,
-                                'total_spots': lot.spots.count(),
+                                'available_spots': available,
+                                'total_spots': total,
+                                'occupancy_percent': round(lot.occupancy / total * 100, 1) if total > 0 else 0
                             }
                         }
                     )
