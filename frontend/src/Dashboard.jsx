@@ -51,17 +51,19 @@ function Dashboard() {
           // Real-time update for a single spot
           const update = message.data;
           if (update.lot_id != null && typeof update.available_spots === 'number') {
-            setLots(prevLots => prevLots.map(lot =>
-              // Use == for type coercion in case of string vs number mismatch
-              lot.id == update.lot_id
-                ? {
-                    ...lot,
-                    total_spots: typeof update.total_spots === 'number' ? update.total_spots : lot.total_spots,
-                    available_spots: update.available_spots,
-                    occupancy_percent: typeof update.occupancy_percent === 'number' ? update.occupancy_percent : lot.occupancy_percent
-                  }
-                : lot
-            ));
+            setLots(prevLots => prevLots.map(lot => {
+              // Match on id or parking_lot_id (REST API uses 'id', some responses use 'parking_lot_id')
+              const lotId = lot.id ?? lot.parking_lot_id;
+              if (lotId == update.lot_id) {
+                return {
+                  ...lot,
+                  total_spots: typeof update.total_spots === 'number' ? update.total_spots : lot.total_spots,
+                  available_spots: update.available_spots,
+                  occupancy_percent: typeof update.occupancy_percent === 'number' ? update.occupancy_percent : lot.occupancy_percent
+                };
+              }
+              return lot;
+            }));
           }
           // Update spots if viewing this lot
           if (update.spot_id != null) {
@@ -222,7 +224,17 @@ function Dashboard() {
       });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
-      setLots(data);
+      // Normalize field names (API returns 'id'/'name' or 'parking_lot_id'/'parking_lot_name')
+      const normalizedData = data.map(lot => ({
+        id: lot.id ?? lot.parking_lot_id,
+        name: lot.name ?? lot.parking_lot_name,
+        total_spots: lot.total_spots,
+        available_spots: lot.available_spots,
+        occupancy_percent: lot.occupancy_percent ?? (lot.total_spots > 0
+          ? Math.round((lot.total_spots - lot.available_spots) / lot.total_spots * 1000) / 10
+          : 0)
+      }));
+      setLots(normalizedData);
       setLastUpdated(new Date());
       setLoading(false);
     } catch (err) {

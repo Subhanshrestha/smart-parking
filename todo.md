@@ -76,7 +76,7 @@
   - Serializers use annotated values when available
 - [x] Lightweight serializers for nested data (`ParkingLotMinimalSerializer`)
 - [ ] Database connection pooling for production
-- [ ] Redis caching for higher traffic
+- [x] Redis caching for higher traffic (Redis channel layer for WebSocket)
 
 ## Security
 
@@ -88,6 +88,8 @@
 
 ## DevOps
 
+- [x] Docker WebSocket support (Daphne ASGI server)
+- [x] Nginx WebSocket proxy configuration
 - [ ] Kubernetes deployment manifests
 - [ ] Terraform infrastructure as code
 - [ ] Monitoring and alerting (Prometheus/Grafana)
