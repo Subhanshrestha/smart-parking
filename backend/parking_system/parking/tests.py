@@ -1,6 +1,4 @@
 from django.test import TestCase
-from django.urls import reverse
-from django.utils import timezone
 from django.core.cache import cache
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -332,7 +330,7 @@ class DashboardAPITest(APITestCase):
 
     def test_dashboard_empty_lot(self):
         """Test dashboard with lot that has no spots"""
-        empty_lot = ParkingLot.objects.create(parking_lot_name='Empty Lot')
+        ParkingLot.objects.create(parking_lot_name='Empty Lot')
         response = self.client.get('/api/dashboard/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Find the empty lot in response

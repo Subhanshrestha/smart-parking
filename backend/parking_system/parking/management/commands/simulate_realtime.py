@@ -2,7 +2,7 @@ import random
 import time
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from parking.models import ParkingSpot, ParkingLot
+from parking.models import ParkingLot
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
@@ -72,7 +72,7 @@ class Command(BaseCommand):
         channel_layer = get_channel_layer()
 
         self.stdout.write(self.style.SUCCESS(
-            f'Starting real-time parking simulation...'
+            'Starting real-time parking simulation...'
         ))
         self.stdout.write(f'  Interval: {interval}s')
         self.stdout.write(f'  Gain: {gain}')

@@ -1,7 +1,7 @@
 import random
 import time
 from django.core.management.base import BaseCommand
-from parking.models import ParkingSpot, ParkingLot
+from parking.models import ParkingSpot
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 

@@ -44,6 +44,7 @@ services:
       context: ./frontend
       args:
         VITE_API_URL: ${VITE_API_URL}
+        VITE_WS_URL: ${VITE_WS_URL}
         VITE_BASE_PATH: ${VITE_BASE_PATH}
     restart: unless-stopped
     depends_on:

@@ -5,12 +5,10 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Count, Q
 from django.core.cache import cache
-from datetime import datetime
 from .models import PermitType, ParkingLot, ParkingSpot, Event, Session, User, Vehicle
 from .serializers import (
     PermitTypeSerializer,
     ParkingLotSerializer,
-    ParkingLotMinimalSerializer,
     ParkingSpotSerializer,
     EventSerializer,
     SessionSerializer,
