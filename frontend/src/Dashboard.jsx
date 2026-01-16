@@ -50,21 +50,27 @@ function Dashboard() {
         case 'spot_update':
           // Real-time update for a single spot
           const update = message.data;
-          setLots(prevLots => prevLots.map(lot =>
-            lot.id === update.lot_id
-              ? {
-                  ...lot,
-                  available_spots: update.available_spots,
-                  occupancy_percent: update.occupancy_percent
-                }
-              : lot
-          ));
+          if (update.lot_id != null && typeof update.available_spots === 'number') {
+            setLots(prevLots => prevLots.map(lot =>
+              // Use == for type coercion in case of string vs number mismatch
+              lot.id == update.lot_id
+                ? {
+                    ...lot,
+                    total_spots: typeof update.total_spots === 'number' ? update.total_spots : lot.total_spots,
+                    available_spots: update.available_spots,
+                    occupancy_percent: typeof update.occupancy_percent === 'number' ? update.occupancy_percent : lot.occupancy_percent
+                  }
+                : lot
+            ));
+          }
           // Update spots if viewing this lot
-          setSpots(prevSpots => prevSpots.map(spot =>
-            spot.parking_spot_id === update.spot_id
-              ? { ...spot, availability: update.available }
-              : spot
-          ));
+          if (update.spot_id != null) {
+            setSpots(prevSpots => prevSpots.map(spot =>
+              spot.parking_spot_id === update.spot_id
+                ? { ...spot, availability: update.available }
+                : spot
+            ));
+          }
           setLastUpdated(new Date());
           break;
 
